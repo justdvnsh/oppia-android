@@ -1,16 +1,30 @@
 package org.oppia.android.domain.exploration
 
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import kotlinx.coroutines.Deferred
+import org.oppia.android.app.model.CheckpointDatabase
+import org.oppia.android.app.model.EphemeralState
 import org.oppia.android.app.model.Exploration
+import org.oppia.android.data.persistence.PersistentCacheStore
 import org.oppia.android.domain.oppialogger.exceptions.ExceptionsController
+import org.oppia.android.domain.profile.ProfileManagementController
 import org.oppia.android.util.data.AsyncResult
 import org.oppia.android.util.data.DataProvider
 import org.oppia.android.util.data.DataProviders
+import org.oppia.android.util.data.DataProviders.Companion.transform
+import org.oppia.android.util.data.DataProviders.Companion.transformAsync
 import javax.inject.Inject
 
 private const val GET_EXPLORATION_BY_ID_PROVIDER_ID =
   "get_exploration_by_id_provider_id"
+
+private const val ADD_CHECKPOINT_PROVIDER_ID =
+  "add_checkpoint_provider_id"
+
+private const val GET_CHECKPOINT_PROVIDER_ID =
+  "get_checkpoint_provider_id"
 
 /**
  * Controller for loading explorations by ID, or beginning to play an exploration.
@@ -22,8 +36,12 @@ class ExplorationDataController @Inject constructor(
   private val explorationProgressController: ExplorationProgressController,
   private val explorationRetriever: ExplorationRetriever,
   private val dataProviders: DataProviders,
-  private val exceptionsController: ExceptionsController
+  private val exceptionsController: ExceptionsController,
+  cacheStoreFactory: PersistentCacheStore.Factory
 ) {
+
+  private val checkpointDataStore =  cacheStoreFactory.create("checkpoint_database", CheckpointDatabase.getDefaultInstance())
+
   /** Returns an [Exploration] given an ID. */
   fun getExplorationById(id: String): DataProvider<Exploration> {
     return dataProviders.createInMemoryDataProviderAsync(
@@ -32,6 +50,14 @@ class ExplorationDataController @Inject constructor(
       retrieveExplorationById(id)
     }
   }
+
+//  fun getStateByName(name: String): DataProvider<EphemeralState> {
+//    return dataProviders.createInMemoryDataProviderAsync(
+//      GET_CHECKPOINT_PROVIDER_ID
+//    ) {
+//      retrieveStateById(name)
+//    }
+//  }
 
   /**
    * Begins playing an exploration of the specified ID. This method is not expected to fail.
@@ -68,6 +94,44 @@ class ExplorationDataController @Inject constructor(
     }
   }
 
+  fun getCheckpoint(explorationId: String): DataProvider<String?> {
+    return checkpointDataStore.transformAsync(GET_CHECKPOINT_PROVIDER_ID) {
+      AsyncResult.success(it.checkpointsMap[explorationId])
+    }
+  }
+
+  fun checkpointCurrentState(explorationId: String): DataProvider<Any?> {
+    val deffered = checkpointDataStore.storeDataWithCustomChannelAsync(
+      updateInMemoryCache = true
+    ) {
+      Log.d("Exploration Activity", explorationProgressController.getCurrentState().toString())
+        val checkpointDatabaseBuilder =
+          it.toBuilder()
+            .putCheckpoints(
+              explorationId,
+              explorationProgressController.getCurrentStateName()
+            )
+        Pair(checkpointDatabaseBuilder.build(), CheckpointActionStatus.SUCCESS)
+    }
+    return dataProviders.createInMemoryDataProviderAsync(ADD_CHECKPOINT_PROVIDER_ID) {
+      return@createInMemoryDataProviderAsync getDefferedResult(deffered)
+    }
+  }
+
+  private suspend fun getDefferedResult(deffered: Deferred<CheckpointActionStatus>): AsyncResult<Any?> {
+    return when (deffered.await()) {
+      CheckpointActionStatus.SUCCESS -> AsyncResult.success(null)
+      CheckpointActionStatus.FAILURE -> AsyncResult.failed(Exception("Siemthing"))
+      CheckpointActionStatus.PENDING -> AsyncResult.success(null)
+    }
+  }
+
+  private enum class CheckpointActionStatus {
+    SUCCESS,
+    FAILURE,
+    PENDING
+  }
+
   // DataProviders expects this function to be a suspend function.
   @Suppress("RedundantSuspendModifier")
   private suspend fun retrieveExplorationById(explorationId: String): AsyncResult<Exploration> {
@@ -78,4 +142,14 @@ class ExplorationDataController @Inject constructor(
       AsyncResult.failed(e)
     }
   }
+
+//  @Suppress("RedundantSuspendModifier")
+//  private suspend fun retrieveStateById(name: String): AsyncResult<EphemeralState> {
+//    return try {
+//      explorationProgressController.getStateByName(name)
+//    } catch (e: Exception) {
+//      exceptionsController.logNonFatalException(e)
+//      AsyncResult.failed(e)
+//    }
+//  }
 }

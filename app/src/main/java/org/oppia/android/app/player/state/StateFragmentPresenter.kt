@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.InputMethodManager
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.LiveData
@@ -35,6 +36,7 @@ import org.oppia.android.app.player.stopplaying.StopStatePlayingSessionListener
 import org.oppia.android.app.utility.SplitScreenManager
 import org.oppia.android.app.viewmodel.ViewModelProvider
 import org.oppia.android.databinding.StateFragmentBinding
+import org.oppia.android.domain.exploration.ExplorationDataController
 import org.oppia.android.domain.exploration.ExplorationProgressController
 import org.oppia.android.domain.topic.StoryProgressController
 import org.oppia.android.util.data.AsyncResult
@@ -60,6 +62,7 @@ class StateFragmentPresenter @Inject constructor(
   private val context: Context,
   private val viewModelProvider: ViewModelProvider<StateViewModel>,
   private val explorationProgressController: ExplorationProgressController,
+  private val explorationDataController: ExplorationDataController,
   private val storyProgressController: StoryProgressController,
   private val logger: ConsoleLogger,
   @DefaultResourceBucketName private val resourceBucketName: String,
@@ -292,6 +295,10 @@ class StateFragmentPresenter @Inject constructor(
   }
 
   private fun subscribeToCurrentState() {
+    explorationDataController.getCheckpoint(explorationId).toLiveData()
+      .observe(activity, Observer {
+        Toast.makeText(activity, it.toString(), Toast.LENGTH_SHORT).show()
+      })
     ephemeralStateLiveData.observe(
       fragment,
       Observer { result ->
@@ -314,6 +321,9 @@ class StateFragmentPresenter @Inject constructor(
     }
 
     val ephemeralState = result.getOrThrow()
+
+//    if (ephemeralState.state.name)
+
     val shouldSplit = splitScreenManager.shouldSplitScreen(ephemeralState.state.interaction.id)
     if (shouldSplit) {
       viewModel.isSplitView.set(true)

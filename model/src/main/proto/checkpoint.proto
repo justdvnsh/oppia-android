@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package model;
+
+option java_package = "org.oppia.android.app.model";
+option java_multiple_files = true;
+
+message CheckpointDatabase {
+  // Mapping from unique ID to profile.
+  map<string, string> checkpoints = 1;
+}

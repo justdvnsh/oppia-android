@@ -110,7 +110,7 @@ class ExplorationActivity :
   }
 
   override fun stopSession() {
-    explorationActivityPresenter.stopExploration()
+    explorationActivityPresenter.checkpointCurrentState()
   }
 
   override fun onCreateOptionsMenu(menu: Menu?): Boolean {

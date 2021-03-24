@@ -1,5 +1,6 @@
 package org.oppia.android.domain.exploration
 
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import org.oppia.android.app.model.AnswerOutcome
@@ -78,6 +79,33 @@ class ExplorationProgressController @Inject constructor(
       explorationProgress.advancePlayStageTo(ExplorationProgress.PlayStage.NOT_PLAYING)
     }
   }
+
+  internal fun checkpointCurrentState() {
+    explorationProgressLock.withLock {
+      check(explorationProgress.playStage != ExplorationProgress.PlayStage.NOT_PLAYING) {
+        "Cannot finish playing an exploration that hasn't yet been started"
+      }
+      Log.d("Exploration Activity",
+        explorationProgress.stateDeck.getCurrentEphemeralState().state.toString())
+    }
+  }
+
+  internal fun getCurrentStateName(): String =
+    explorationProgress
+      .stateDeck
+      .getCurrentEphemeralState()
+      .state
+      .name
+
+  internal fun getStateByName(name: String): AsyncResult<State> {
+    return when(explorationProgress.playStage) {
+      ExplorationProgress.PlayStage.NOT_PLAYING -> AsyncResult.pending()
+      ExplorationProgress.PlayStage.LOADING_EXPLORATION -> AsyncResult.pending()
+      ExplorationProgress.PlayStage.VIEWING_STATE -> AsyncResult.success(explorationProgress.stateGraph.getState(name))
+      ExplorationProgress.PlayStage.SUBMITTING_ANSWER -> AsyncResult.pending()
+    }
+  }
+
 
   /**
    * Submits an answer to the current state and returns how the UI should respond to this answer.

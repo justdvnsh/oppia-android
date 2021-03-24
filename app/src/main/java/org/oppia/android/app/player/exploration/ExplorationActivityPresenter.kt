@@ -210,8 +210,26 @@ class ExplorationActivityPresenter @Inject constructor(
             )
             else -> {
               logger.d("ExplorationActivity", "Successfully stopped exploration")
+              logger.d("Exploration Activity", explorationId)
               backPressActivitySelector(backflowScreen)
               (activity as ExplorationActivity).finish()
+            }
+          }
+        }
+      )
+  }
+
+  fun checkpointCurrentState() {
+    explorationDataController.checkpointCurrentState(explorationId).toLiveData()
+      .observe(
+        activity,
+        Observer {
+          when {
+            it.isPending() -> logger.d("Exploration Activity", "Checkpointing Current State")
+            it.isFailure() -> logger.d("Exploration Activity", "Failed Checkpointing")
+            it.isSuccess() -> {
+              logger.d("Exploration Activity", "Successfully Checkpointed the current state")
+              stopExploration()
             }
           }
         }
