@@ -1,5 +1,6 @@
 package org.oppia.android.domain.state
 
+import android.util.Log
 import org.oppia.android.app.model.AnswerAndResponse
 import org.oppia.android.app.model.CompletedState
 import org.oppia.android.app.model.EphemeralState
@@ -9,6 +10,7 @@ import org.oppia.android.app.model.Solution
 import org.oppia.android.app.model.State
 import org.oppia.android.app.model.SubtitledHtml
 import org.oppia.android.app.model.UserAnswer
+import org.oppia.android.util.data.AsyncResult
 
 // TODO(#59): Hide the visibility of this class to domain implementations.
 
@@ -21,11 +23,24 @@ internal class StateDeck internal constructor(
   private val isTopOfDeckTerminalChecker: (State) -> Boolean
 ) {
   private var pendingTopState: State = initialState
-  private val previousStates: MutableList<EphemeralState> = ArrayList()
+  private var previousStates: MutableList<EphemeralState> = ArrayList()
   private val currentDialogInteractions: MutableList<AnswerAndResponse> = ArrayList()
   private val hintList: MutableList<Hint> = ArrayList()
   private lateinit var solution: Solution
   private var stateIndex: Int = 0
+
+  internal fun getPreviousStates(): MutableList<EphemeralState> {
+    return previousStates
+  }
+
+  internal fun setPreviousStates(previousStates: MutableList<EphemeralState>): AsyncResult<Any> {
+    this.previousStates = previousStates
+    return AsyncResult.success("Hurray")
+  }
+
+  internal fun setStateIndex(index: Int) {
+    stateIndex = index
+  }
 
   /** Resets this deck to a new, specified initial [State]. */
   internal fun resetDeck(initialState: State) {
@@ -68,6 +83,8 @@ internal class StateDeck internal constructor(
     // Note that the terminal state is evaluated first since it can only return true if the current state is the top
     // of the deck, and that state is the terminal one. Otherwise the terminal check would never be triggered since
     // the second case assumes the top of the deck must be pending.
+    Log.d("Exploration Activity:", previousStates.toString())
+    Log.d("Exploration Activity::", stateIndex.toString())
     return when {
       isCurrentStateTerminal() -> getCurrentTerminalState()
       stateIndex == previousStates.size -> getCurrentPendingState()
@@ -100,11 +117,13 @@ internal class StateDeck internal constructor(
     }
     // NB: This technically has a 'next' state, but it's not marked until it's first navigated away since the new state
     // doesn't become fully realized until navigated to.
-    previousStates += EphemeralState.newBuilder()
-      .setState(pendingTopState)
-      .setHasPreviousState(!isCurrentStateInitial())
-      .setCompletedState(CompletedState.newBuilder().addAllAnswer(currentDialogInteractions))
-      .build()
+    previousStates.plusAssign(
+      EphemeralState.newBuilder()
+        .setState(pendingTopState)
+        .setHasPreviousState(!isCurrentStateInitial())
+        .setCompletedState(CompletedState.newBuilder().addAllAnswer(currentDialogInteractions))
+        .build()
+    )
     currentDialogInteractions.clear()
     hintList.clear()
     pendingTopState = state

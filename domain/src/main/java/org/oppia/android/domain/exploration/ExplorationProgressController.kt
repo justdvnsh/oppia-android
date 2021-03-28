@@ -4,14 +4,17 @@ import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import org.oppia.android.app.model.AnswerOutcome
+import org.oppia.android.app.model.CheckpointDatabase
 import org.oppia.android.app.model.EphemeralState
 import org.oppia.android.app.model.Exploration
 import org.oppia.android.app.model.Hint
 import org.oppia.android.app.model.Solution
 import org.oppia.android.app.model.State
 import org.oppia.android.app.model.UserAnswer
+import org.oppia.android.data.persistence.PersistentCacheStore
 import org.oppia.android.domain.classify.AnswerClassificationController
 import org.oppia.android.domain.oppialogger.exceptions.ExceptionsController
+import org.oppia.android.domain.state.StateDeck
 import org.oppia.android.util.data.AsyncDataSubscriptionManager
 import org.oppia.android.util.data.AsyncResult
 import org.oppia.android.util.data.DataProvider
@@ -37,7 +40,8 @@ class ExplorationProgressController @Inject constructor(
   private val asyncDataSubscriptionManager: AsyncDataSubscriptionManager,
   private val explorationRetriever: ExplorationRetriever,
   private val answerClassificationController: AnswerClassificationController,
-  private val exceptionsController: ExceptionsController
+  private val exceptionsController: ExceptionsController,
+  cacheStoreFactory: PersistentCacheStore.Factory
 ) {
   // TODO(#179): Add support for parameters.
   // TODO(#182): Add support for refresher explorations.
@@ -49,6 +53,7 @@ class ExplorationProgressController @Inject constructor(
   //  performing a post-load operation. The current state of the controller is leaking this
   //  implementation detail to tests.
 
+  private val checkpointDatastore = cacheStoreFactory.create("checkpoint_database", CheckpointDatabase.getDefaultInstance())
   private val currentStateDataProvider =
     dataProviders.createInMemoryDataProviderAsync(
       CURRENT_STATE_DATA_PROVIDER_ID,
@@ -104,6 +109,14 @@ class ExplorationProgressController @Inject constructor(
       ExplorationProgress.PlayStage.VIEWING_STATE -> AsyncResult.success(explorationProgress.stateGraph.getState(name))
       ExplorationProgress.PlayStage.SUBMITTING_ANSWER -> AsyncResult.pending()
     }
+  }
+
+  internal fun getPreviousStates(): MutableList<EphemeralState> {
+    return explorationProgress.stateDeck.getPreviousStates()
+  }
+
+  fun setPreviousStates(previousStates: MutableList<EphemeralState>): AsyncResult<Any> {
+    return explorationProgress.stateDeck.setPreviousStates(previousStates)
   }
 
 
@@ -413,6 +426,7 @@ class ExplorationProgressController @Inject constructor(
   }
 
   private suspend fun retrieveCurrentStateWithinCacheAsync(): AsyncResult<EphemeralState> {
+    val checkpointDatabase = checkpointDatastore.readDataAsync().await()
     val explorationId: String? = explorationProgressLock.withLock {
       if (explorationProgress.playStage == ExplorationProgress.PlayStage.LOADING_EXPLORATION) {
         explorationProgress.currentExplorationId
@@ -439,7 +453,7 @@ class ExplorationProgressController @Inject constructor(
         ExplorationProgress.PlayStage.LOADING_EXPLORATION -> {
           try {
             // The exploration must be available for this stage since it was loaded above.
-            finishLoadExploration(exploration!!, explorationProgress)
+            finishLoadExploration(exploration!!, explorationProgress, checkpointDatabase)
             AsyncResult.success(explorationProgress.stateDeck.getCurrentEphemeralState())
           } catch (e: Exception) {
             exceptionsController.logNonFatalException(e)
@@ -453,12 +467,21 @@ class ExplorationProgressController @Inject constructor(
     }
   }
 
-  private fun finishLoadExploration(exploration: Exploration, progress: ExplorationProgress) {
+  private fun finishLoadExploration(exploration: Exploration, progress: ExplorationProgress, checkpointDatabase: CheckpointDatabase) {
     // The exploration must be initialized first since other lazy fields depend on it being inited.
     progress.currentExploration = exploration
     progress.stateGraph.reset(exploration.statesMap)
     progress.stateDeck.resetDeck(progress.stateGraph.getState(exploration.initStateName))
 
+    Log.d("Exploration State", checkpointDatabase.checkpointsMap.toString())
+    checkpointDatabase.checkpointsMap[exploration.id]?.previousStatesList?.let {
+//      progress.stateDeck.setPreviousStates(
+//        it
+//      )
+//      progress.stateDeck.setStateIndex(it.size)
+//      Log.d("Exploration State", it.toString())
+//      progress.stateDeck = StateDeck(it[0].state, ExplorationProgress::isTopStateTerminal)
+    }
     // Advance the stage, but do not notify observers since the current state can be reported
     // immediately to the UI.
     progress.advancePlayStageTo(ExplorationProgress.PlayStage.VIEWING_STATE)

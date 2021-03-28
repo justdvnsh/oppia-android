@@ -298,6 +298,11 @@ class StateFragmentPresenter @Inject constructor(
     explorationDataController.getCheckpoint(explorationId).toLiveData()
       .observe(activity, Observer {
         Toast.makeText(activity, it.toString(), Toast.LENGTH_SHORT).show()
+//        if (it.isSuccess()) {
+//          it.getOrThrow()?.let {
+//            explorationProgressController.setPreviousStates(it)
+//          }
+//        }
       })
     ephemeralStateLiveData.observe(
       fragment,

@@ -4,9 +4,11 @@ import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import kotlinx.coroutines.Deferred
+import org.oppia.android.app.model.Checkpoint
 import org.oppia.android.app.model.CheckpointDatabase
 import org.oppia.android.app.model.EphemeralState
 import org.oppia.android.app.model.Exploration
+import org.oppia.android.app.model.State
 import org.oppia.android.data.persistence.PersistentCacheStore
 import org.oppia.android.domain.oppialogger.exceptions.ExceptionsController
 import org.oppia.android.domain.profile.ProfileManagementController
@@ -94,9 +96,10 @@ class ExplorationDataController @Inject constructor(
     }
   }
 
-  fun getCheckpoint(explorationId: String): DataProvider<String?> {
+  fun getCheckpoint(explorationId: String): DataProvider<MutableList<EphemeralState>?> {
     return checkpointDataStore.transformAsync(GET_CHECKPOINT_PROVIDER_ID) {
-      AsyncResult.success(it.checkpointsMap[explorationId])
+      if (it.checkpointsMap.containsKey(explorationId)) AsyncResult.success(it.checkpointsMap[explorationId]?.previousStatesList)
+      else AsyncResult.failed(Exception("Failed to Retrieve Data"))
     }
   }
 
@@ -105,13 +108,24 @@ class ExplorationDataController @Inject constructor(
       updateInMemoryCache = true
     ) {
       Log.d("Exploration Activity", explorationProgressController.getCurrentState().toString())
-        val checkpointDatabaseBuilder =
+      var checkpointDatabaseBuilder: CheckpointDatabase.Builder? = null
+      if (it.checkpointsMap.containsKey(explorationId)) {
+        checkpointDatabaseBuilder =
           it.toBuilder()
-            .putCheckpoints(
-              explorationId,
-              explorationProgressController.getCurrentStateName()
+            it.checkpointsMap[explorationId] =
+              Checkpoint.getDefaultInstance().toBuilder()
+              .addAllPreviousStates(explorationProgressController.getPreviousStates() as Iterable<EphemeralState>)
+              .build()
+      } else {
+        checkpointDatabaseBuilder =
+          it.toBuilder()
+            .putCheckpoints(explorationId,
+              Checkpoint.getDefaultInstance().toBuilder()
+                .addAllPreviousStates(explorationProgressController.getPreviousStates() as Iterable<EphemeralState>)
+                .build()
             )
-        Pair(checkpointDatabaseBuilder.build(), CheckpointActionStatus.SUCCESS)
+      }
+      Pair(checkpointDatabaseBuilder?.build(), CheckpointActionStatus.SUCCESS)
     }
     return dataProviders.createInMemoryDataProviderAsync(ADD_CHECKPOINT_PROVIDER_ID) {
       return@createInMemoryDataProviderAsync getDefferedResult(deffered)
