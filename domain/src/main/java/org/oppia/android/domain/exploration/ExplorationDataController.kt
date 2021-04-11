@@ -96,9 +96,9 @@ class ExplorationDataController @Inject constructor(
     }
   }
 
-  fun getCheckpoint(explorationId: String): DataProvider<MutableList<EphemeralState>?> {
+  fun getCheckpoint(explorationId: String): DataProvider<Checkpoint?> {
     return checkpointDataStore.transformAsync(GET_CHECKPOINT_PROVIDER_ID) {
-      if (it.checkpointsMap.containsKey(explorationId)) AsyncResult.success(it.checkpointsMap[explorationId]?.previousStatesList)
+      if (it.checkpointsMap.containsKey(explorationId)) AsyncResult.success(it.checkpointsMap[explorationId])
       else AsyncResult.failed(Exception("Failed to Retrieve Data"))
     }
   }
@@ -114,6 +114,8 @@ class ExplorationDataController @Inject constructor(
           it.toBuilder()
             it.checkpointsMap[explorationId] =
               Checkpoint.getDefaultInstance().toBuilder()
+                .setStateIndex(explorationProgressController.getStateIndex())
+                .setPendingTopState(explorationProgressController.getPendingState())
               .addAllPreviousStates(explorationProgressController.getPreviousStates() as Iterable<EphemeralState>)
               .build()
       } else {
@@ -121,6 +123,8 @@ class ExplorationDataController @Inject constructor(
           it.toBuilder()
             .putCheckpoints(explorationId,
               Checkpoint.getDefaultInstance().toBuilder()
+                .setStateIndex(explorationProgressController.getStateIndex())
+                .setPendingTopState(explorationProgressController.getPendingState())
                 .addAllPreviousStates(explorationProgressController.getPreviousStates() as Iterable<EphemeralState>)
                 .build()
             )

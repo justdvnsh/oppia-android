@@ -8,7 +8,9 @@ option java_package = "org.oppia.android.app.model";
 option java_multiple_files = true;
 
 message Checkpoint {
+    State pendingTopState = 1;
     repeated EphemeralState previousStates = 2;
+    int32 stateIndex = 3;
 }
 
 message CheckpointDatabase {

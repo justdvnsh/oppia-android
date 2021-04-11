@@ -29,9 +29,11 @@ internal class StateDeck internal constructor(
   private lateinit var solution: Solution
   private var stateIndex: Int = 0
 
-  internal fun getPreviousStates(): MutableList<EphemeralState> {
-    return previousStates
+  internal fun setPendingTopState(topState: State) {
+    pendingTopState = topState
   }
+
+  internal fun getPreviousStates(): MutableList<EphemeralState> = previousStates
 
   internal fun setPreviousStates(previousStates: MutableList<EphemeralState>): AsyncResult<Any> {
     this.previousStates = previousStates
@@ -41,6 +43,8 @@ internal class StateDeck internal constructor(
   internal fun setStateIndex(index: Int) {
     stateIndex = index
   }
+
+  internal fun getStateIndex(): Int = stateIndex
 
   /** Resets this deck to a new, specified initial [State]. */
   internal fun resetDeck(initialState: State) {

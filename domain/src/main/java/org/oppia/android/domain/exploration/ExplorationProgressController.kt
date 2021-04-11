@@ -111,6 +111,13 @@ class ExplorationProgressController @Inject constructor(
     }
   }
 
+  internal fun getPendingState(): State = explorationProgress.stateDeck.getPendingTopState()
+  fun setPendingState(state: State) =
+    explorationProgress.stateDeck.setPendingTopState(state)
+
+  internal fun getStateIndex(): Int = explorationProgress.stateDeck.getStateIndex()
+  fun setStateIndex(index: Int) = explorationProgress.stateDeck.setStateIndex(index)
+
   internal fun getPreviousStates(): MutableList<EphemeralState> {
     return explorationProgress.stateDeck.getPreviousStates()
   }

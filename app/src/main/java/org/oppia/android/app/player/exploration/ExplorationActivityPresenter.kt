@@ -220,6 +220,8 @@ class ExplorationActivityPresenter @Inject constructor(
   }
 
   fun checkpointCurrentState() {
+    // TODO: Add a condition to check if the chapter has been completed.
+    // TODO: If the condition returns true, then call stopExploration() else call the code below
     explorationDataController.checkpointCurrentState(explorationId).toLiveData()
       .observe(
         activity,
