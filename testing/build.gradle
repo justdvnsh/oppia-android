@@ -53,6 +53,7 @@ dependencies {
       'androidx.lifecycle:lifecycle-livedata-ktx:2.2.0-alpha03',
       'androidx.core:core-ktx:1.0.2',
       "androidx.test:core:1.0.0",
+      'androidx.test.espresso:espresso-accessibility:3.1.0',
       'androidx.test.espresso:espresso-core:3.2.0',
       'androidx.test:runner:1.2.0',
       'com.google.dagger:dagger:2.24',
@@ -88,7 +89,7 @@ dependencies {
   annotationProcessor(
       'com.google.auto.service:auto-service:1.0-rc4',
   )
-  // TODO (#59): Remove this once Bazel is introduced
+  // TODO(#59): Remove this once Bazel is introduced
   // sufficiently visible for generated Dagger code. This can be done more cleanly via Bazel since dependencies can be
   // controlled more directly than in Gradle.
   implementation project(':model')

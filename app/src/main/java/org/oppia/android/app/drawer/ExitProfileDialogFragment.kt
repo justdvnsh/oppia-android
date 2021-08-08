@@ -51,6 +51,7 @@ class ExitProfileDialogFragment : DialogFragment() {
 
     val restoreLastCheckedItem = when (exitProfileDialogArguments.highlightItem) {
       HighlightItem.ADMINISTRATOR_CONTROLS_ITEM,
+      HighlightItem.DEVELOPER_OPTIONS_ITEM,
       HighlightItem.LAST_CHECKED_MENU_ITEM -> true
       else -> false
     }
@@ -62,7 +63,7 @@ class ExitProfileDialogFragment : DialogFragment() {
         dialog.dismiss()
       }
       .setPositiveButton(R.string.home_activity_back_dialog_exit) { _, _ ->
-        // TODO(#322): Need to start intent for ProfileChooserActivity to get update. Change to finish when live data bug is fixed.
+        // TODO(#3641): Investigate on using finish instead of intent.
         val intent = ProfileChooserActivity.createProfileChooserActivity(activity!!)
         if (!restoreLastCheckedItem) {
           intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
@@ -86,6 +87,7 @@ class ExitProfileDialogFragment : DialogFragment() {
 
     val restoreLastCheckedItem = when (exitProfileDialogArguments.highlightItem) {
       HighlightItem.ADMINISTRATOR_CONTROLS_ITEM,
+      HighlightItem.DEVELOPER_OPTIONS_ITEM,
       HighlightItem.LAST_CHECKED_MENU_ITEM -> true
       else -> false
     }
@@ -96,6 +98,8 @@ class ExitProfileDialogFragment : DialogFragment() {
       exitProfileDialogInterface.unhighlightSwitchProfileMenuItem()
       if (exitProfileDialogArguments.highlightItem == HighlightItem.LAST_CHECKED_MENU_ITEM) {
         exitProfileDialogInterface.highlightLastCheckedMenuItem()
+      } else if (exitProfileDialogArguments.highlightItem == HighlightItem.DEVELOPER_OPTIONS_ITEM) {
+        exitProfileDialogInterface.highlightDeveloperOptionsItem()
       } else {
         exitProfileDialogInterface.highlightAdministratorControlsItem()
       }

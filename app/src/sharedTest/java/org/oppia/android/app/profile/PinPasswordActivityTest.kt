@@ -10,6 +10,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.action.ViewActions.click
 import androidx.test.espresso.action.ViewActions.closeSoftKeyboard
+import androidx.test.espresso.action.ViewActions.pressImeActionButton
 import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.intent.Intents
 import androidx.test.espresso.intent.Intents.intended
@@ -46,6 +47,8 @@ import org.oppia.android.app.application.ApplicationInjector
 import org.oppia.android.app.application.ApplicationInjectorProvider
 import org.oppia.android.app.application.ApplicationModule
 import org.oppia.android.app.application.ApplicationStartupListenerModule
+import org.oppia.android.app.devoptions.DeveloperOptionsModule
+import org.oppia.android.app.devoptions.DeveloperOptionsStarterModule
 import org.oppia.android.app.home.HomeActivity
 import org.oppia.android.app.player.state.hintsandsolution.HintsAndSolutionConfigModule
 import org.oppia.android.app.shim.ViewBindingShimModule
@@ -63,10 +66,12 @@ import org.oppia.android.domain.classify.rules.numberwithunits.NumberWithUnitsRu
 import org.oppia.android.domain.classify.rules.numericinput.NumericInputRuleModule
 import org.oppia.android.domain.classify.rules.ratioinput.RatioInputModule
 import org.oppia.android.domain.classify.rules.textinput.TextInputRuleModule
+import org.oppia.android.domain.exploration.lightweightcheckpointing.ExplorationStorageModule
 import org.oppia.android.domain.onboarding.ExpirationMetaDataRetrieverModule
 import org.oppia.android.domain.oppialogger.LogStorageModule
 import org.oppia.android.domain.oppialogger.loguploader.LogUploadWorkerModule
 import org.oppia.android.domain.oppialogger.loguploader.WorkManagerConfigurationModule
+import org.oppia.android.domain.platformparameter.PlatformParameterModule
 import org.oppia.android.domain.question.QuestionModule
 import org.oppia.android.domain.topic.PrimeTopicAssetsControllerModule
 import org.oppia.android.testing.TestLogReportingModule
@@ -96,6 +101,7 @@ import javax.inject.Singleton
   qualifiers = "port-xxhdpi"
 )
 class PinPasswordActivityTest {
+  // TODO(#3362): Use AccessibilityTestRule
 
   @get:Rule
   val activityTestRule: ActivityTestRule<PinPasswordActivity> = ActivityTestRule(
@@ -674,6 +680,147 @@ class PinPasswordActivityTest {
   }
 
   @Test
+  fun testPinPassword_withUser_forgot_inputAdminPinAndNullPin_errorIsDisplayed() {
+    ActivityScenario.launch<PinPasswordActivity>(
+      PinPasswordActivity.createPinPasswordActivityIntent(
+        context = context,
+        adminPin = adminPin,
+        profileId = userId
+      )
+    ).use {
+      onView(withId(R.id.input_pin))
+        .perform(editTextInputAction.appendText(""), closeSoftKeyboard())
+      onView(withId(R.id.forgot_pin)).perform(click())
+      onView(
+        allOf(
+          withId(R.id.admin_settings_input_pin_edit_text),
+          isDescendantOfA(withId(R.id.admin_settings_input_pin))
+        )
+      ).inRoot(isDialog())
+        .perform(editTextInputAction.appendText(""), closeSoftKeyboard())
+      onView(withText(context.getString(R.string.admin_settings_submit)))
+        .inRoot(isDialog())
+        .perform(click())
+      onView(withId(R.id.admin_settings_input_pin))
+        .check(matches(hasErrorText(R.string.admin_auth_null)))
+    }
+  }
+
+  @Test
+  fun testPinPassword_withUser_forgot_inputAdminPinAndNullPin_configChange_errorIsDisplayed() {
+    ActivityScenario.launch<PinPasswordActivity>(
+      PinPasswordActivity.createPinPasswordActivityIntent(
+        context = context,
+        adminPin = adminPin,
+        profileId = userId
+      )
+    ).use {
+      onView(withId(R.id.input_pin))
+        .perform(editTextInputAction.appendText(""), closeSoftKeyboard())
+      onView(withId(R.id.forgot_pin)).perform(click())
+      onView(
+        allOf(
+          withId(R.id.admin_settings_input_pin_edit_text),
+          isDescendantOfA(withId(R.id.admin_settings_input_pin))
+        )
+      ).inRoot(isDialog())
+        .perform(editTextInputAction.appendText(""), closeSoftKeyboard())
+      onView(withText(context.getString(R.string.admin_settings_submit)))
+        .inRoot(isDialog())
+        .perform(click())
+      onView(isRoot()).perform(orientationLandscape())
+      onView(withId(R.id.admin_settings_input_pin))
+        .check(matches(hasErrorText(R.string.admin_auth_null)))
+    }
+  }
+
+  @Test
+  fun testPinPassword_withUser_forgot_inputAdminPinAndNullPin_imeAction_errorIsDisplayed() {
+    ActivityScenario.launch<PinPasswordActivity>(
+      PinPasswordActivity.createPinPasswordActivityIntent(
+        context = context,
+        adminPin = adminPin,
+        profileId = userId
+      )
+    ).use {
+      onView(withId(R.id.input_pin))
+        .perform(editTextInputAction.appendText(""), closeSoftKeyboard())
+      onView(withId(R.id.forgot_pin)).perform(click())
+      onView(
+        allOf(
+          withId(R.id.admin_settings_input_pin_edit_text),
+          isDescendantOfA(withId(R.id.admin_settings_input_pin))
+        )
+      ).inRoot(isDialog())
+        .perform(editTextInputAction.appendText(""), pressImeActionButton())
+      onView(withId(R.id.admin_settings_input_pin))
+        .check(matches(hasErrorText(R.string.admin_auth_null)))
+    }
+  }
+
+  @Test
+  fun testPinPassword_user_forgot_adminPinAndNullPin_configChange_imeAction_errorIsDisplayed() {
+    ActivityScenario.launch<PinPasswordActivity>(
+      PinPasswordActivity.createPinPasswordActivityIntent(
+        context = context,
+        adminPin = adminPin,
+        profileId = userId
+      )
+    ).use {
+      onView(withId(R.id.input_pin))
+        .perform(editTextInputAction.appendText(""), closeSoftKeyboard())
+      onView(withId(R.id.forgot_pin)).perform(click())
+      onView(
+        allOf(
+          withId(R.id.admin_settings_input_pin_edit_text),
+          isDescendantOfA(withId(R.id.admin_settings_input_pin))
+        )
+      ).inRoot(isDialog())
+        .perform(editTextInputAction.appendText(""), pressImeActionButton())
+      onView(isRoot()).perform(orientationLandscape())
+      onView(withId(R.id.admin_settings_input_pin))
+        .check(matches(hasErrorText(R.string.admin_auth_null)))
+    }
+  }
+
+  @Test
+  fun testPinPassword_withUser_forgot_inputNullAdminPin_configChange_wrongAdminPinError() {
+    ActivityScenario.launch<PinPasswordActivity>(
+      PinPasswordActivity.createPinPasswordActivityIntent(
+        context = context,
+        adminPin = adminPin,
+        profileId = userId
+      )
+    ).use {
+      onView(withId(R.id.input_pin))
+        .perform(editTextInputAction.appendText(""), closeSoftKeyboard())
+      onView(withId(R.id.forgot_pin)).perform(click())
+      onView(
+        allOf(
+          withId(R.id.admin_settings_input_pin_edit_text),
+          isDescendantOfA(withId(R.id.admin_settings_input_pin))
+        )
+      ).inRoot(isDialog())
+        .perform(editTextInputAction.appendText(""), closeSoftKeyboard())
+      onView(withText(context.getString(R.string.admin_settings_submit)))
+        .inRoot(isDialog())
+        .perform(click())
+      onView(withId(R.id.admin_settings_input_pin))
+        .check(matches(hasErrorText(R.string.admin_auth_null)))
+      onView(
+        allOf(
+          withId(R.id.admin_settings_input_pin_edit_text),
+          isDescendantOfA(withId(R.id.admin_settings_input_pin))
+        )
+      ).inRoot(isDialog())
+        .perform(editTextInputAction.appendText("1"), closeSoftKeyboard())
+      onView(isRoot()).perform(orientationLandscape())
+      onView(withId(R.id.admin_settings_input_pin))
+        .check(matches(hasNoErrorText()))
+    }
+  }
+
+  @Test
   fun testPinPassword_withUser_forgot_inputAdminPinAndInvalidPin_errorIsDisplayed() {
     ActivityScenario.launch<PinPasswordActivity>(
       PinPasswordActivity.createPinPasswordActivityIntent(
@@ -930,9 +1077,9 @@ class PinPasswordActivityTest {
   @Singleton
   @Component(
     modules = [
-      RobolectricModule::class, TestDispatcherModule::class, ApplicationModule::class,
-      LoggerModule::class, ContinueModule::class, FractionInputModule::class,
-      ItemSelectionInputModule::class, MultipleChoiceInputModule::class,
+      RobolectricModule::class, PlatformParameterModule::class, TestDispatcherModule::class,
+      ApplicationModule::class, LoggerModule::class, ContinueModule::class,
+      FractionInputModule::class, ItemSelectionInputModule::class, MultipleChoiceInputModule::class,
       NumberWithUnitsRuleModule::class, NumericInputRuleModule::class, TextInputRuleModule::class,
       DragDropSortInputModule::class, ImageClickInputModule::class, InteractionsModule::class,
       GcsResourceModule::class, GlideImageLoaderModule::class, ImageParsingModule::class,
@@ -942,7 +1089,9 @@ class PinPasswordActivityTest {
       ViewBindingShimModule::class, RatioInputModule::class,
       ApplicationStartupListenerModule::class, LogUploadWorkerModule::class,
       WorkManagerConfigurationModule::class, HintsAndSolutionConfigModule::class,
-      FirebaseLogUploaderModule::class, FakeOppiaClockModule::class, PracticeTabModule::class
+      FirebaseLogUploaderModule::class, FakeOppiaClockModule::class, PracticeTabModule::class,
+      DeveloperOptionsStarterModule::class, DeveloperOptionsModule::class,
+      ExplorationStorageModule::class
     ]
   )
   interface TestApplicationComponent : ApplicationComponent {
